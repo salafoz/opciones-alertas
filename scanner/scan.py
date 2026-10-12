@@ -189,9 +189,9 @@ def main():
             write_json(OUT / "chains" / f"{t.replace('^', '_')}.json", {
                 "ticker": t, "spot": d["current_price"], "iv30": r(d.get("iv30"), 1),
                 "quoteTime": raw.get("timestamp"), "exps": exps,
-                "cols": ["exp", "put", "strike", "bid", "ask", "last", "iv", "delta", "gamma", "theta", "vega", "volume", "oi"],
+                "cols": ["exp", "put", "strike", "bid", "ask", "last", "iv", "delta", "gamma", "theta", "vega", "volume", "oi", "rho"],
                 "rows": [[exp_idx[c["exp"]], 1 if c["side"] == "put" else 0, c["strike"], c["bid"], c["ask"], c["last"],
-                          c["iv"], c["delta"], c["gamma"], c["theta"], c["vega"], c["volume"], c["oi"]] for c in contracts],
+                          c["iv"], c["delta"], c["gamma"], c["theta"], c["vega"], c["volume"], c["oi"], c["rho"]] for c in contracts],
             })
             print(f"{t}: {len(contracts)} contratos")
             return contracts, {

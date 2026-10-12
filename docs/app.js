@@ -123,7 +123,7 @@ function renderResults() {
 async function loadData() {
   try { [index, results] = await Promise.all([getData('index.json'), getData('results.json')]); }
   catch { index = results = null; }
-  renderResults(); renderChainPickers(); renderStatus();
+  renderResults(); refreshChains(); renderStatus();
 }
 
 /* ---------- Filtros ---------- */
@@ -192,40 +192,97 @@ async function submitFilter(e) {
 }
 
 /* ---------- Cadena ---------- */
-let chain = null;
-function renderChainPickers() {
+const chains = {};      // cadenas ya descargadas, por ticker
+let openTicker = null;  // empresa desplegada en la columna izquierda
+let sel = null;         // { ticker, exp } que se muestra en la tabla
+
+function renderSide() {
   const ok = (index?.tickers || []).filter((t) => !t.error);
-  const sel = $('#chTicker'), prev = sel.value;
-  sel.innerHTML = ok.map((t) => `<option>${esc(t.ticker)}</option>`).join('');
-  if (ok.some((t) => t.ticker === prev)) sel.value = prev;
-  if (!$('#tab-cadena').hidden) loadChain();
+  $('#chSide').innerHTML = ok.map((t) => {
+    const open = t.ticker === openTicker, ch = chains[t.ticker];
+    const exps = !open ? '' : `<div class="exps">${ch
+      ? ch.exps.map((e) => `<button data-exp="${e}" class="${sel?.ticker === t.ticker && sel.exp === e ? 'on' : ''}">${fmtExp(e)}<span>${dteOf(e)} d</span></button>`).join('')
+      : '<span class="muted small">Cargando…</span>'}</div>`;
+    return `<div class="co${open ? ' open' : ''}">
+      <button class="cohead" data-ticker="${esc(t.ticker)}" aria-expanded="${open}"><b>${esc(t.ticker)}</b><span>${num(t.spot)}</span></button>${exps}</div>`;
+  }).join('') || '<div class="muted small" style="padding:10px">Sin datos todavía.</div>';
 }
-async function loadChain() {
-  const t = $('#chTicker').value;
-  if (!t) { $('#chain').innerHTML = '<div class="empty">Sin datos todavía.</div>'; return; }
-  if (chain?.ticker !== t) {
-    $('#chain').innerHTML = '<div class="empty">Cargando…</div>';
-    try { chain = await getData(`chains/${t.replace('^', '_')}.json`); }
-    catch { $('#chain').innerHTML = '<div class="empty">No se pudo cargar la cadena.</div>'; return; }
-    $('#chExp').innerHTML = chain.exps.map((e, i) => `<option value="${i}">${fmtExp(e)} · ${dteOf(e)} d</option>`).join('');
-    const near = chain.exps.findIndex((e) => dteOf(e) >= 25);
-    $('#chExp').value = Math.max(0, near);
+
+async function toggleTicker(t) {
+  if (openTicker === t) { openTicker = null; renderSide(); return; }
+  openTicker = t;
+  renderSide();
+  if (!chains[t]) {
+    try { chains[t] = await getData(`chains/${t.replace('^', '_')}.json`); }
+    catch { toast(`No se pudo cargar la cadena de ${t}`); openTicker = null; renderSide(); return; }
   }
+  if (openTicker !== t) return; // se desplegó otra empresa mientras cargaba
+  const exps = chains[t].exps;
+  selectExp(t, exps.find((e) => dteOf(e) >= 25) || exps[0]);
+  $('#chSide .co.open')?.scrollIntoView({ block: 'nearest' });
+}
+
+function selectExp(ticker, exp) {
+  sel = exp ? { ticker, exp } : null;
+  renderSide();
   renderChain();
 }
+
+function openDefaultChain() {
+  renderSide();
+  const first = (index?.tickers || []).find((t) => !t.error);
+  if (!sel && !openTicker && first) toggleTicker(first.ticker);
+}
+
+// Tras un escaneo nuevo se descartan las cadenas en memoria y se recarga la que esté a la vista.
+async function refreshChains() {
+  for (const k of Object.keys(chains)) delete chains[k];
+  if ($('#tab-cadena').hidden) return;
+  const keep = sel;
+  if (!keep) { openTicker = null; return openDefaultChain(); }
+  try { chains[keep.ticker] = await getData(`chains/${keep.ticker.replace('^', '_')}.json`); } catch {}
+  const ch = chains[keep.ticker];
+  selectExp(keep.ticker, ch?.exps.includes(keep.exp) ? keep.exp : ch?.exps[0]);
+}
+
+const CHAIN_COLS = ['Prima', 'Bid', 'Ask', 'Δ', 'Γ', 'Θ', 'Vega', 'Rho', 'IV', 'Vol', 'OI'];
+function sideCells(r, itm, first) {
+  const cls = `${itm ? 'itm' : ''}${first ? ' gs' : ''}`;
+  if (!r) return CHAIN_COLS.map((_, i) => `<td class="${i ? (itm ? 'itm' : '') : cls}">—</td>`).join('');
+  const mid = r[4] > 0 ? (r[3] + r[4]) / 2 : r[5];
+  const v = [`<b>${num(mid)}</b>`, num(r[3]), num(r[4]), num(r[7], 3), num(r[8], 4), num(r[9], 3), num(r[10], 3),
+    num(r[13], 3), `${num(r[6], 1)}%`, big(r[11]), big(r[12])];
+  return v.map((x, i) => `<td class="${i ? (itm ? 'itm' : '') : cls}">${x}</td>`).join('');
+}
+
 function renderChain() {
-  const ei = +$('#chExp').value, put = +$('#chSide').value, all = $('#chAll').checked, spot = chain.spot;
-  $('#chInfo').textContent = `${chain.ticker} ${num(spot)} · IV30 ${num(chain.iv30, 1)}% · cotización ${chain.quoteTime || ''}`;
-  let rows = chain.rows.filter((r) => r[0] === ei && r[1] === put).sort((a, b) => a[2] - b[2]);
-  if (!all) rows = rows.filter((r) => Math.abs(r[2] / spot - 1) <= 0.2);
-  if (!rows.length) { $('#chain').innerHTML = '<div class="empty">Sin contratos para este vencimiento.</div>'; return; }
-  const atm = rows.reduce((b, r) => (Math.abs(r[2] - spot) < Math.abs(b[2] - spot) ? r : b));
-  $('#chain').innerHTML = `<div class="tablewrap"><table><thead><tr>
-    <th>Strike</th><th>Bid</th><th>Ask</th><th>IV</th><th>Δ</th><th>Γ</th><th>Θ</th><th>Vega</th><th>Vol</th><th>OI</th></tr></thead><tbody>
-    ${rows.map((r) => `<tr class="${(put ? r[2] > spot : r[2] < spot) ? 'itm' : ''} ${r === atm ? 'atm' : ''}">
-      <td>${num(r[2], r[2] % 1 ? 2 : 0)}</td><td>${num(r[3])}</td><td>${num(r[4])}</td><td>${num(r[6], 1)}%</td>
-      <td>${num(r[7], 3)}</td><td>${num(r[8], 4)}</td><td>${num(r[9], 3)}</td><td>${num(r[10], 3)}</td>
-      <td>${big(r[11])}</td><td>${big(r[12])}</td></tr>`).join('')}</tbody></table></div>`;
+  const ch = sel && chains[sel.ticker];
+  if (!ch) {
+    $('#chInfo').textContent = '';
+    $('#chain').innerHTML = '<div class="empty">Elige una empresa y un vencimiento en la columna de la izquierda.</div>';
+    return;
+  }
+  const ei = ch.exps.indexOf(sel.exp), spot = ch.spot, all = $('#chAll').checked;
+  $('#chInfo').innerHTML = `<b>${esc(ch.ticker)}</b> ${num(spot)} · vence ${fmtExp(sel.exp)} (${dteOf(sel.exp)} d) · IV30 ${num(ch.iv30, 1)}%`;
+  const byStrike = new Map();
+  for (const r of ch.rows) {
+    if (r[0] !== ei) continue;
+    if (!byStrike.has(r[2])) byStrike.set(r[2], {});
+    byStrike.get(r[2])[r[1] ? 'put' : 'call'] = r;
+  }
+  let strikes = [...byStrike.keys()].sort((a, b) => a - b);
+  if (!all) strikes = strikes.filter((k) => Math.abs(k / spot - 1) <= 0.2);
+  if (!strikes.length) { $('#chain').innerHTML = '<div class="empty">Sin contratos para este vencimiento.</div>'; return; }
+  const atm = strikes.reduce((b, k) => (Math.abs(k - spot) < Math.abs(b - spot) ? k : b));
+  const heads = CHAIN_COLS.map((c, i) => `<th class="${i ? '' : 'gs'}">${c}</th>`).join('');
+  $('#chain').innerHTML = `<div class="tablewrap chainwrap"><table><thead>
+    <tr><th class="k" rowspan="2">Strike</th><th class="gc gs" colspan="${CHAIN_COLS.length}">CALLS</th><th class="gp gs" colspan="${CHAIN_COLS.length}">PUTS</th></tr>
+    <tr class="h2">${heads}${heads}</tr></thead><tbody>
+    ${strikes.map((k) => `<tr class="${k === atm ? 'atm' : ''}"><td class="k">${num(k, k % 1 ? 2 : 0)}</td>${
+      sideCells(byStrike.get(k).call, k < spot, true)}${sideCells(byStrike.get(k).put, k > spot, true)}</tr>`).join('')}
+    </tbody></table></div>`;
+  const wrap = $('#chain .chainwrap'), row = $('tr.atm', wrap);
+  if (row) wrap.scrollTop = row.offsetTop - wrap.clientHeight / 2;
 }
 
 /* ---------- Ajustes ---------- */
@@ -286,7 +343,8 @@ async function testPush() {
 function showTab(name) {
   for (const s of $$('main > section')) s.hidden = s.id !== `tab-${name}`;
   for (const b of $$('nav button')) b.classList.toggle('on', b.dataset.tab === name);
-  if (name === 'cadena') loadChain();
+  document.body.classList.toggle('wide', name === 'cadena');
+  if (name === 'cadena') openDefaultChain();
   if (name === 'ajustes') { renderStatus(); renderPushState(); }
   history.replaceState(null, '', `#${name}`);
   window.scrollTo(0, 0);
@@ -319,8 +377,12 @@ async function init() {
     config.filters = before.filter((x) => x !== f);
     if (await saveConfig(`Eliminar filtro: ${f.name}`)) { $('#dlg').close(); renderFilters(); } else config.filters = before;
   };
-  $('#chTicker').onchange = loadChain;
-  for (const id of ['#chExp', '#chSide', '#chAll']) $(id).onchange = renderChain;
+  $('#chSide').onclick = (e) => {
+    const b = e.target.closest('button');
+    if (b?.dataset.ticker) toggleTicker(b.dataset.ticker);
+    else if (b?.dataset.exp) selectExp(openTicker, b.dataset.exp);
+  };
+  $('#chAll').onchange = renderChain;
   $('#btnSaveTickers').onclick = async () => {
     const before = config.tickers;
     config.tickers = parseTickers($('#tickers').value);
