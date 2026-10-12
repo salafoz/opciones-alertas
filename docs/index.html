@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<title>Opciones · Alertas</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<style>
+:root {
+  --bg: #0b1220; --panel: #131c2e; --panel2: #1a2540; --line: #26324d;
+  --text: #e6ecf7; --muted: #8c9ab5; --accent: #35d39a; --accent-ink: #062b1d;
+  --put: #ff7a85; --call: #5eb2ff; --warn: #ffc857;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); -webkit-tap-highlight-color: transparent; }
+header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); padding: 12px 16px; display: flex; align-items: baseline; gap: 10px; }
+header h1 { font-size: 17px; margin: 0; flex: 1; }
+header small { color: var(--muted); font-size: 12px; }
+main { padding: 12px 16px; max-width: 760px; margin: 0 auto; }
+section[hidden] { display: none; }
+nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: var(--panel); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); z-index: 5; }
+nav button { flex: 1; background: none; border: 0; color: var(--muted); padding: 10px 0 12px; font: inherit; font-size: 12px; display: grid; gap: 2px; justify-items: center; }
+nav button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+nav button.on { color: var(--accent); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+.card > .head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; }
+.card > .head h2 { font-size: 15px; margin: 0; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.card > .body { padding: 0 14px 12px; }
+.muted { color: var(--muted); }
+.small { font-size: 12.5px; }
+.pill { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 99px; background: var(--panel2); color: var(--muted); white-space: nowrap; }
+.pill.new { background: var(--accent); color: var(--accent-ink); }
+.pill.put { color: var(--put); } .pill.call { color: var(--call); }
+.row { padding: 10px 14px; border-top: 1px solid var(--line); }
+.row .r1 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.row .r1 b { font-size: 15px; }
+.row .r2 { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.row .r2 b { color: var(--text); font-weight: 600; }
+.row .r2 .hi b { color: var(--accent); }
+button, select, input, textarea { font: inherit; color: inherit; }
+.btn { background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; padding: 9px 14px; min-height: 40px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.danger { color: var(--put); }
+.btn.ghost { background: none; border-color: transparent; padding: 6px 8px; min-height: 0; color: var(--muted); }
+.btn:disabled { opacity: .5; }
+.bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.bar .grow { flex: 1; }
+input[type=text], input[type=number], input[type=password], select, textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 9px 10px; min-height: 40px; width: 100%; min-width: 0; }
+textarea { resize: vertical; }
+label.f { display: grid; gap: 4px; margin-bottom: 12px; font-size: 12.5px; color: var(--muted); }
+.cond { display: grid; grid-template-columns: minmax(0, 1fr) 68px 84px 34px; gap: 6px; margin-bottom: 6px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.switch { appearance: none; width: 42px; height: 24px; min-height: 0; border-radius: 99px; background: var(--panel2); border: 1px solid var(--line); position: relative; flex: none; padding: 0; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--muted); transition: transform .15s; }
+.switch:checked { background: var(--accent); border-color: var(--accent); }
+.switch:checked::after { transform: translateX(18px); background: var(--accent-ink); }
+dialog { border: 0; padding: 0; background: var(--bg); color: var(--text); width: 100%; max-width: 760px; height: 100%; max-height: 100%; margin: 0 auto; }
+dialog::backdrop { background: #000a; }
+dialog form { display: flex; flex-direction: column; height: 100%; }
+dialog .dhead { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+dialog .dhead h2 { font-size: 16px; margin: 0; flex: 1; }
+dialog .dbody { padding: 14px 16px; overflow-y: auto; flex: 1; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 500; background: var(--panel); position: sticky; top: 0; }
+th:first-child, td:first-child { position: sticky; left: 0; background: var(--panel); text-align: left; font-weight: 600; }
+tr.itm td { background: #18233c; } tr.itm td:first-child { background: #1d2a48; }
+tr.atm td { border-bottom: 2px solid var(--accent); }
+.empty { text-align: center; color: var(--muted); padding: 28px 12px; }
+#toast { position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 9px 14px; border-radius: 9px; font-size: 13px; max-width: 90vw; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 20; }
+#toast.show { opacity: 1; }
+.kv { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.kv:first-child { border-top: 0; }
+ol.steps { padding-left: 18px; margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
+ol.steps li { margin-bottom: 4px; }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header><h1>Opciones · Alertas</h1><small id="updated"></small></header>
+
+<main>
+  <section id="tab-alertas">
+    <div class="bar">
+      <span class="muted small grow" id="scanInfo"></span>
+      <button class="btn" id="btnRefresh">Actualizar</button>
+      <button class="btn primary" id="btnScan">Escanear ahora</button>
+    </div>
+    <div id="results"></div>
+  </section>
+
+  <section id="tab-filtros" hidden>
+    <div class="bar"><span class="muted small grow">La notificación salta cuando un contrato cumple todas las condiciones del filtro.</span>
+      <button class="btn primary" id="btnNewFilter">+ Filtro</button></div>
+    <div id="filters"></div>
+  </section>
+
+  <section id="tab-cadena" hidden>
+    <div class="bar">
+      <select id="chTicker" style="flex:1" aria-label="Ticker"></select>
+      <select id="chExp" style="flex:1.4" aria-label="Vencimiento"></select>
+      <select id="chSide" style="flex:.9" aria-label="Tipo"><option value="1">Puts</option><option value="0">Calls</option></select>
+    </div>
+    <div class="bar small muted"><span class="grow" id="chInfo"></span>
+      <label><input type="checkbox" id="chAll"> todos los strikes</label></div>
+    <div id="chain"></div>
+  </section>
+
+  <section id="tab-ajustes" hidden>
+    <div class="card"><div class="head"><h2>Acciones vigiladas</h2></div><div class="body">
+      <label class="f">Tickers USA separados por espacios o comas
+        <textarea id="tickers" rows="3" autocapitalize="characters" spellcheck="false"></textarea></label>
+      <button class="btn primary" id="btnSaveTickers">Guardar tickers</button>
+    </div></div>
+
+    <div class="card"><div class="head"><h2>Notificaciones push</h2><span class="pill" id="pushState">—</span></div><div class="body">
+      <div class="bar" style="margin:0"><button class="btn primary" id="btnPush">Activar en este móvil</button>
+        <button class="btn" id="btnTestPush">Probar</button></div>
+    </div></div>
+
+    <div class="card"><div class="head"><h2>Conexión con GitHub</h2><span class="pill" id="tokenState">—</span></div><div class="body">
+      <label class="f">Token de acceso (se guarda solo en este dispositivo)
+        <input type="password" id="token" autocomplete="off" placeholder="github_pat_…"></label>
+      <button class="btn primary" id="btnSaveToken">Guardar token</button>
+      <ol class="steps">
+        <li>GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token.</li>
+        <li>Repository access: solo este repositorio.</li>
+        <li>Permissions → Contents: Read and write.</li>
+      </ol>
+    </div></div>
+
+    <div class="card"><div class="head"><h2>Estado</h2></div><div class="body" id="status"></div></div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="alertas" class="on"><svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7 2.5 8h-17C3.500 16 6 15 6 9z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>Alertas</button>
+  <button data-tab="filtros"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg>Filtros</button>
+  <button data-tab="cadena"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 10h16M4 15h16M10 5v14"/></svg>Cadena</button>
+  <button data-tab="ajustes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.600 5.600l2.100 2.100M16.300 16.300l2.100 2.100M5.600 18.400l2.100-2.100M16.300 7.700l2.100-2.100"/></svg>Ajustes</button>
+</nav>
+
+<dialog id="dlg">
+  <form method="dialog" id="filterForm">
+    <div class="dhead"><button class="btn ghost" value="cancel" type="button" id="dlgCancel">Cancelar</button>
+      <h2 id="dlgTitle">Filtro</h2><button class="btn primary" type="submit">Guardar</button></div>
+    <div class="dbody">
+      <label class="f">Nombre<input type="text" id="fName" required maxlength="60"></label>
+      <div class="two">
+        <label class="f">Tipo<select id="fSide"><option value="put">Puts</option><option value="call">Calls</option><option value="both">Ambos</option></select></label>
+        <label class="f">Tickers (vacío = todos)<input type="text" id="fTickers" autocapitalize="characters" spellcheck="false" placeholder="AAPL, MSFT"></label>
+      </div>
+      <div class="f" style="margin-bottom:4px">Condiciones (deben cumplirse todas)</div>
+      <div id="conds"></div>
+      <button class="btn" type="button" id="btnAddCond" style="margin-bottom:14px">+ Condición</button>
+      <div class="two">
+        <label class="f">Ordenar por<select id="fSort"></select></label>
+        <label class="f">Orden<select id="fDir"><option value="desc">Mayor primero</option><option value="asc">Menor primero</option></select></label>
+      </div>
+      <label class="f">No repetir el aviso del mismo contrato durante (horas)
+        <input type="number" id="fCooldown" min="0" step="1" inputmode="numeric"></label>
+      <button class="btn danger" type="button" id="btnDelFilter">Eliminar filtro</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" role="status"></div>
+<script src="app.js"></script>
+</body>
+</html>

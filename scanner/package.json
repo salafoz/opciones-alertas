@@ -1,0 +1,12 @@
+{
+  "name": "opciones-alertas-scanner",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scan": "node scan.mjs",
+    "dev": "node dev-server.mjs"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}
