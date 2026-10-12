@@ -64,6 +64,8 @@ async function putRepoJson(path, json, sha, message) {
 }
 async function getData(file) {
   if (!REPO) return (await fetch(`../out/${file}`, { cache: 'no-store' })).json();
+  // Sin token la API de GitHub solo admite 60 peticiones/hora: se lee directamente el fichero público.
+  if (!LS.get('token', '')) return (await fetch(`https://raw.githubusercontent.com/${REPO}/data/${file}`, { cache: 'no-store' })).json();
   try {
     return await (await gh(`contents/${file}?ref=data`, { headers: { Accept: 'application/vnd.github.raw+json' } })).json();
   } catch {
@@ -257,7 +259,7 @@ function sideCells(r, itm, first) {
 }
 
 function renderChain() {
-  for (const b of $('#chSeg button')) b.classList.toggle('on', b.dataset.side === chainSide);
+  for (const b of $$('#chSeg button')) b.classList.toggle('on', b.dataset.side === chainSide);
   const showCalls = chainSide !== 'put', showPuts = chainSide !== 'call';
   const ch = sel && chains[sel.ticker];
   if (!ch) {
