@@ -1,3 +1,5 @@
 node_modules/
 out/
 .secrets/
+__pycache__/
+*.pyc
