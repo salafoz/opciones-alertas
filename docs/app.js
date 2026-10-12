@@ -54,6 +54,8 @@ async function gh(path, opts = {}) {
 }
 async function getRepoJson(path) {
   if (!REPO) return { json: await (await fetch(`../${path}`, { cache: 'no-store' })).json(), sha: null };
+  // Sin token (solo lectura) se usa el fichero público para no depender de la cuota de la API.
+  if (!LS.get('token', '')) return { json: await (await fetch(`https://raw.githubusercontent.com/${REPO}/main/${path}`, { cache: 'no-store' })).json(), sha: null };
   const f = await (await gh(`contents/${path}?ref=main`)).json();
   return { json: JSON.parse(b64decode(f.content)), sha: f.sha };
 }
