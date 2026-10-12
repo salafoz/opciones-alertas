@@ -195,6 +195,7 @@ async function submitFilter(e) {
 const chains = {};      // cadenas ya descargadas, por ticker
 let openTicker = null;  // empresa desplegada en la columna izquierda
 let sel = null;         // { ticker, exp } que se muestra en la tabla
+let chainSide = LS.get('chainSide', 'both'); // 'call' | 'put' | 'both'
 
 function renderSide() {
   const ok = (index?.tickers || []).filter((t) => !t.error);
@@ -256,6 +257,8 @@ function sideCells(r, itm, first) {
 }
 
 function renderChain() {
+  for (const b of $('#chSeg button')) b.classList.toggle('on', b.dataset.side === chainSide);
+  const showCalls = chainSide !== 'put', showPuts = chainSide !== 'call';
   const ch = sel && chains[sel.ticker];
   if (!ch) {
     $('#chInfo').textContent = '';
@@ -276,10 +279,10 @@ function renderChain() {
   const atm = strikes.reduce((b, k) => (Math.abs(k - spot) < Math.abs(b - spot) ? k : b));
   const heads = CHAIN_COLS.map((c, i) => `<th class="${i ? '' : 'gs'}">${c}</th>`).join('');
   $('#chain').innerHTML = `<div class="tablewrap chainwrap"><table><thead>
-    <tr><th class="k" rowspan="2">Strike</th><th class="gc gs" colspan="${CHAIN_COLS.length}">CALLS</th><th class="gp gs" colspan="${CHAIN_COLS.length}">PUTS</th></tr>
-    <tr class="h2">${heads}${heads}</tr></thead><tbody>
+    <tr><th class="k" rowspan="2">Strike</th>${showCalls ? `<th class="gc gs" colspan="${CHAIN_COLS.length}">CALLS</th>` : ''}${showPuts ? `<th class="gp gs" colspan="${CHAIN_COLS.length}">PUTS</th>` : ''}</tr>
+    <tr class="h2">${showCalls ? heads : ''}${showPuts ? heads : ''}</tr></thead><tbody>
     ${strikes.map((k) => `<tr class="${k === atm ? 'atm' : ''}"><td class="k">${num(k, k % 1 ? 2 : 0)}</td>${
-      sideCells(byStrike.get(k).call, k < spot, true)}${sideCells(byStrike.get(k).put, k > spot, true)}</tr>`).join('')}
+      showCalls ? sideCells(byStrike.get(k).call, k < spot, true) : ''}${showPuts ? sideCells(byStrike.get(k).put, k > spot, true) : ''}</tr>`).join('')}
     </tbody></table></div>`;
   const wrap = $('#chain .chainwrap'), row = $('tr.atm', wrap);
   if (row) wrap.scrollTop = row.offsetTop - wrap.clientHeight / 2;
@@ -383,6 +386,12 @@ async function init() {
     else if (b?.dataset.exp) selectExp(openTicker, b.dataset.exp);
   };
   $('#chAll').onchange = renderChain;
+  $('#chSeg').onclick = (e) => {
+    const side = e.target.dataset.side;
+    if (!side) return;
+    chainSide = side; LS.set('chainSide', side);
+    renderChain();
+  };
   $('#btnSaveTickers').onclick = async () => {
     const before = config.tickers;
     config.tickers = parseTickers($('#tickers').value);

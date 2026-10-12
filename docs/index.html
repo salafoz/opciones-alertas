@@ -90,7 +90,11 @@ body.wide main { max-width: 1500px; }
 .exps button span { color: var(--muted); font-size: 11px; }
 .exps button.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .exps button.on span { color: var(--accent-ink); }
-.chainwrap { max-height: calc(100dvh - 190px); overflow: auto; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.seg button { background: var(--panel); border: 0; padding: 8px 12px; min-height: 38px; font-size: 13px; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.chainwrap { max-height: calc(100dvh - 230px); overflow: auto; }
 @media (max-width: 719px) { .cohead span { display: none; } }
 @media (min-width: 720px) { .chainlayout { grid-template-columns: 190px minmax(0, 1fr); gap: 14px; } }
 .empty { text-align: center; color: var(--muted); padding: 28px 12px; }
@@ -126,8 +130,11 @@ a { color: var(--accent); }
     <div class="chainlayout">
       <aside class="side" id="chSide" aria-label="Empresas y vencimientos"></aside>
       <div class="chmain">
-        <div class="bar small muted"><span class="grow" id="chInfo"></span>
-          <label><input type="checkbox" id="chAll"> todos los strikes</label></div>
+        <div class="bar" style="margin-bottom:8px">
+          <div class="seg" id="chSeg" role="group" aria-label="Tipo de opción"><button data-side="call">Calls</button><button data-side="put">Puts</button><button data-side="both">Ambos</button></div>
+          <span class="grow"></span>
+          <label class="small muted"><input type="checkbox" id="chAll"> todos los strikes</label></div>
+        <div class="small muted" id="chInfo" style="margin-bottom:8px"></div>
         <div id="chain"></div>
       </div>
     </div>
